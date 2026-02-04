@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>IP & Clock Monitor</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+            background-color: #f5f5f5;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #333;
+        }
+
+        .container {
+            text-align: center;
+        }
+
+        h1 {
+            font-size: 1.5rem;
+            font-weight: 500;
+            color: #555;
+            margin-bottom: 2rem;
+            letter-spacing: 0.05em;
+        }
+
+        .card {
+            background: #fff;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+            padding: 2rem 3rem;
+            min-width: 320px;
+        }
+
+        .ip-section {
+            margin-bottom: 1.5rem;
+            padding-bottom: 1.5rem;
+            border-bottom: 1px solid #eee;
+        }
+
+        .ip-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0.5rem 0;
+        }
+
+        .ip-label {
+            font-size: 0.875rem;
+            color: #666;
+        }
+
+        .ip-value {
+            font-family: 'SF Mono', 'Monaco', 'Inconsolata', 'Roboto Mono', monospace;
+            font-size: 0.9375rem;
+            color: #333;
+            font-weight: 500;
+        }
+
+        .clock-section {
+            padding-top: 0.5rem;
+        }
+
+        .time {
+            font-family: 'SF Mono', 'Monaco', 'Inconsolata', 'Roboto Mono', monospace;
+            font-size: 2.5rem;
+            font-weight: 300;
+            color: #222;
+            letter-spacing: 0.05em;
+        }
+
+        .date {
+            font-size: 0.875rem;
+            color: #888;
+            margin-top: 0.5rem;
+        }
+
+        .loading {
+            color: #999;
+            font-style: italic;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>IP & Clock Monitor</h1>
+        <div class="card">
+            <div class="ip-section">
+                <div class="ip-row">
+                    <span class="ip-label">Server IP</span>
+                    <span class="ip-value" id="server-ip">Loading...</span>
+                </div>
+                <div class="ip-row">
+                    <span class="ip-label">Client IP</span>
+                    <span class="ip-value" id="client-ip">Loading...</span>
+                </div>
+            </div>
+            <div class="clock-section">
+                <div class="time" id="clock">00:00:00</div>
+                <div class="date" id="date"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Fetch IP addresses from the API
+        async function fetchIPs() {
+            try {
+                const response = await fetch('/api/ip');
+                const data = await response.json();
+                document.getElementById('server-ip').textContent = data.serverIP;
+                document.getElementById('client-ip').textContent = data.clientIP;
+            } catch (error) {
+                document.getElementById('server-ip').textContent = 'Error';
+                document.getElementById('client-ip').textContent = 'Error';
+                console.error('Failed to fetch IPs:', error);
+            }
+        }
+
+        // Update the clock
+        function updateClock() {
+            const now = new Date();
+            
+            // Format time as HH:MM:SS
+            const hours = String(now.getHours()).padStart(2, '0');
+            const minutes = String(now.getMinutes()).padStart(2, '0');
+            const seconds = String(now.getSeconds()).padStart(2, '0');
+            document.getElementById('clock').textContent = `${hours}:${minutes}:${seconds}`;
+            
+            // Format date
+            const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
+            document.getElementById('date').textContent = now.toLocaleDateString('en-US', options);
+        }
+
+        // Initialize
+        fetchIPs();
+        updateClock();
+        setInterval(updateClock, 1000);
+    </script>
+</body>
+</html>
