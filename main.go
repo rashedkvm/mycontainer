@@ -14,6 +14,10 @@ type IPResponse struct {
 	ClientIP string `json:"clientIP"`
 }
 
+type ConfigResponse struct {
+	ContainerID string `json:"containerID"`
+}
+
 func main() {
 	// Configure structured logger with JSON output
 	logger := slog.New(slog.NewJSONHandler(os.Stdout, nil))
@@ -25,6 +29,9 @@ func main() {
 
 	// API endpoint for IP addresses
 	http.HandleFunc("/api/ip", handleIP)
+
+	// API endpoint for config
+	http.HandleFunc("/api/config", handleConfig)
 
 	slog.Info("Server starting", "port", 8080)
 	if err := http.ListenAndServe(":8080", nil); err != nil {
@@ -103,4 +110,19 @@ func getClientIP(r *http.Request) string {
 		return r.RemoteAddr
 	}
 	return ip
+}
+
+func handleConfig(w http.ResponseWriter, r *http.Request) {
+	slog.Info("Request",
+		"method", r.Method,
+		"path", r.URL.Path,
+		"remote_addr", r.RemoteAddr,
+	)
+
+	response := ConfigResponse{
+		ContainerID: os.Getenv("CONTAINER_ID"),
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(response)
 }

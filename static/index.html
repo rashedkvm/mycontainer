@@ -88,9 +88,31 @@
             color: #999;
             font-style: italic;
         }
+
+        .container-id {
+            position: fixed;
+            top: 1rem;
+            right: 1rem;
+            font-family: 'SF Mono', 'Monaco', 'Inconsolata', 'Roboto Mono', monospace;
+            font-size: 0.875rem;
+            color: #555;
+        }
+
+        .container-id .arrow {
+            animation: blink 1s step-start infinite;
+        }
+
+        @keyframes blink {
+            50% {
+                opacity: 0;
+            }
+        }
     </style>
 </head>
 <body>
+    <div class="container-id">
+        <span class="arrow">&gt;</span> <span id="container-id"></span>
+    </div>
     <div class="container">
         <h1>IP & Clock Monitor</h1>
         <div class="card">
@@ -141,8 +163,20 @@
             document.getElementById('date').textContent = now.toLocaleDateString('en-US', options);
         }
 
+        // Fetch container ID from the API
+        async function fetchConfig() {
+            try {
+                const response = await fetch('/api/config');
+                const data = await response.json();
+                document.getElementById('container-id').textContent = data.containerID;
+            } catch (error) {
+                console.error('Failed to fetch config:', error);
+            }
+        }
+
         // Initialize
         fetchIPs();
+        fetchConfig();
         updateClock();
         setInterval(updateClock, 1000);
     </script>
