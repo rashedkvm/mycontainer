@@ -1,3 +1,5 @@
+#@ load("@ytt:data", "data")
+---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -14,7 +16,7 @@ spec:
     spec:
       containers:
       - name: mycontainer
-        image: mycontainer:latest
+        image: #@ "{}/{}:{}".format(data.values.image.registry, data.values.image.name, data.values.image.tag)
         ports:
         - containerPort: 8080
         envFrom:

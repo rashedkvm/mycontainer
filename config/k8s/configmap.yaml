@@ -1,6 +1,8 @@
+#@ load("@ytt:data", "data")
+---
 apiVersion: v1
 kind: ConfigMap
 metadata:
   name: mycontainer-config
 data:
-  CONTAINER_ID: "mycontainer-001"
+  CONTAINER_ID: #@ data.values.containerID

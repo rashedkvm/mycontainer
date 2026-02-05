@@ -3,7 +3,7 @@ PLATFORM := linux/$(ARCH)
 REGISTRY ?=
 CONTAINER_ID ?= mycontainer-001
 
-.PHONY: dev build run clean check-registry
+.PHONY: dev build run clean check-registry k8s-deploy k8s-delete
 
 check-registry: ## Verify REGISTRY is set
 	@if [ -z "$(REGISTRY)" ]; then \
@@ -24,6 +24,12 @@ run: check-registry ## Run the Docker container
 	docker run -p 8080:8080 -e CONTAINER_ID=$(CONTAINER_ID) $(REGISTRY)/ip-clock-app
 
 up: build run ## Build and run the Docker container
+
+k8s-deploy: check-registry ## Deploy application to Kubernetes
+	ytt -f config/k8s/ -v image.registry=$(REGISTRY) -v containerID=$(CONTAINER_ID) | kbld -f - | kapp -y deploy -a ip-clock-app -f -
+
+k8s-delete: ## Delete the Kubernetes application
+	kapp delete -a ip-clock-app
 
 stop: ## Stop the Docker container
 	docker stop $$(docker ps -q --filter ancestor=ip-clock-app) 2>/dev/null || true

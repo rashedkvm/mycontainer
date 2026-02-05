@@ -1,0 +1,7 @@
+#@data/values
+---
+image:
+  registry: ""
+  name: ip-clock-app
+  tag: latest
+containerID: mycontainer-001
