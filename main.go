@@ -9,6 +9,32 @@ import (
 	"strings"
 )
 
+const (
+	DefaultPort = "8080"
+)
+
+type Config struct {
+	Port        string
+	ContainerID string
+}
+
+func loadConfig() Config {
+	port := os.Getenv("PORT")
+	if port == "" {
+		port = DefaultPort
+	}
+
+	containerID := os.Getenv("CONTAINER_ID")
+	if containerID == "" {
+		containerID = "N/A"
+	}
+
+	return Config{
+		Port:        port,
+		ContainerID: containerID,
+	}
+}
+
 type IPResponse struct {
 	ServerIP string `json:"serverIP"`
 	ClientIP string `json:"clientIP"`
@@ -23,6 +49,9 @@ func main() {
 	logger := slog.New(slog.NewJSONHandler(os.Stdout, nil))
 	slog.SetDefault(logger)
 
+	// Load configuration
+	config := loadConfig()
+
 	// Serve static files with logging
 	fs := http.FileServer(http.Dir("static"))
 	http.Handle("/", logRequest(fs))
@@ -31,10 +60,16 @@ func main() {
 	http.HandleFunc("/api/ip", handleIP)
 
 	// API endpoint for config
-	http.HandleFunc("/api/config", handleConfig)
+	http.HandleFunc("/api/config", handleConfigWithConfig(config))
 
-	slog.Info("Server starting", "port", 8080)
-	if err := http.ListenAndServe(":8080", nil); err != nil {
+	// Health check endpoint
+	http.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+		w.Write([]byte("OK"))
+	})
+
+	slog.Info("Server starting", "port", config.Port)
+	if err := http.ListenAndServe(":"+config.Port, nil); err != nil {
 		slog.Error("Server failed", "error", err)
 		os.Exit(1)
 	}
@@ -53,6 +88,11 @@ func logRequest(handler http.Handler) http.Handler {
 }
 
 func handleIP(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
 	slog.Info("Request",
 		"method", r.Method,
 		"path", r.URL.Path,
@@ -70,7 +110,9 @@ func handleIP(w http.ResponseWriter, r *http.Request) {
 	)
 
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(response)
+	if err := json.NewEncoder(w).Encode(response); err != nil {
+		slog.Error("Failed to encode JSON response", "error", err)
+	}
 }
 
 func getServerIP() string {
@@ -79,12 +121,19 @@ func getServerIP() string {
 		return "Unknown"
 	}
 
+	var ipv6Addr string
 	for _, addr := range addrs {
 		if ipnet, ok := addr.(*net.IPNet); ok && !ipnet.IP.IsLoopback() {
 			if ipnet.IP.To4() != nil {
-				return ipnet.IP.String()
+				return ipnet.IP.String() // Prefer IPv4
+			}
+			if ipv6Addr == "" && ipnet.IP.To16() != nil {
+				ipv6Addr = ipnet.IP.String() // Store first IPv6 as fallback
 			}
 		}
+	}
+	if ipv6Addr != "" {
+		return ipv6Addr
 	}
 	return "Unknown"
 }
@@ -112,17 +161,52 @@ func getClientIP(r *http.Request) string {
 	return ip
 }
 
+func handleConfigWithConfig(config Config) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodGet {
+			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+			return
+		}
+
+		slog.Info("Request",
+			"method", r.Method,
+			"path", r.URL.Path,
+			"remote_addr", r.RemoteAddr,
+		)
+
+		response := ConfigResponse{
+			ContainerID: config.ContainerID,
+		}
+
+		w.Header().Set("Content-Type", "application/json")
+		if err := json.NewEncoder(w).Encode(response); err != nil {
+			slog.Error("Failed to encode JSON response", "error", err)
+		}
+	}
+}
+
 func handleConfig(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
 	slog.Info("Request",
 		"method", r.Method,
 		"path", r.URL.Path,
 		"remote_addr", r.RemoteAddr,
 	)
 
+	containerID := os.Getenv("CONTAINER_ID")
+	if containerID == "" {
+		containerID = "N/A"
+	}
 	response := ConfigResponse{
-		ContainerID: os.Getenv("CONTAINER_ID"),
+		ContainerID: containerID,
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(response)
+	if err := json.NewEncoder(w).Encode(response); err != nil {
+		slog.Error("Failed to encode JSON response", "error", err)
+	}
 }
