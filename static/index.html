@@ -158,9 +158,11 @@
             const seconds = String(now.getSeconds()).padStart(2, '0');
             document.getElementById('clock').textContent = `${hours}:${minutes}:${seconds}`;
             
-            // Format date
+            // Format date with timezone
             const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
-            document.getElementById('date').textContent = now.toLocaleDateString('en-US', options);
+            const dateStr = now.toLocaleDateString('en-US', options);
+            const tzStr = now.toLocaleTimeString('en-US', { timeZoneName: 'short' }).split(' ').pop();
+            document.getElementById('date').textContent = `${dateStr} (${tzStr})`;
         }
 
         // Fetch container ID from the API

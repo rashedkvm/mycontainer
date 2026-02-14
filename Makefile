@@ -23,19 +23,20 @@ push: check-registry build ## Build and Push the Docker image to the registry
 run: check-registry ## Run the Docker container
 	docker run -p 8080:8080 -e CONTAINER_ID=$(CONTAINER_ID) $(REGISTRY)/ip-clock-app
 
-up: build run ## Build and run the Docker container
+up: ## Build and run the Docker container
+	$(MAKE) build && $(MAKE) run
 
-k8s-deploy: check-registry ## Deploy application to Kubernetes
+k8s-deploy: check-registry ## Deploy application to Kubernetes (requires ytt, kbld, kapp)
 	ytt -f config/k8s/ -v image.registry=$(REGISTRY) -v containerID=$(CONTAINER_ID) | kbld -f - | kapp -y deploy -a ip-clock-app -f -
 
 k8s-delete: ## Delete the Kubernetes application
 	kapp delete -a ip-clock-app
 
 stop: ## Stop the Docker container
-	docker stop $$(docker ps -q --filter ancestor=ip-clock-app) 2>/dev/null || true
+	docker stop $$(docker ps -q --filter ancestor=$(REGISTRY)/ip-clock-app) 2>/dev/null || true
 
 clean: ## Remove the Docker image
-	docker rmi ip-clock-app 2>/dev/null || true
+	docker rmi $(REGISTRY)/ip-clock-app 2>/dev/null || true
 
 .PHONY: help
 help: ## Display this help.
