@@ -4,6 +4,8 @@ on:
   push:
     tags:
       - 'v*'
+    branches:
+      - main
 
 permissions:
   contents: write
@@ -106,15 +108,26 @@ jobs:
           only: ytt, kbld
           token: ${{ secrets.GITHUB_TOKEN }}
       
+      - name: Determine version
+        id: version
+        run: |
+          if [[ "${{ github.ref }}" == refs/tags/* ]]; then
+            VERSION="${{ github.ref_name }}"
+            VERSION="${VERSION#v}"
+          else
+            SHORT_SHA=$(git rev-parse --short HEAD)
+            VERSION="900.0.1-dev+${SHORT_SHA}"
+          fi
+          echo "version=${VERSION}" >> $GITHUB_OUTPUT
+      
       - name: Generate Kubernetes manifests
         run: |
           ytt -f config/k8s/ \
             -v image.registry=ghcr.io/${{ github.repository_owner }} \
             -v image.name=mycontainer \
-            -v image.tag=${{ github.ref_name }} \
-            -v containerID=mycontainer-${{ github.ref_name }} \
-            | kbld -f - > mycontainer-kubernetes.yaml \
-            -v containerID=mycontainer-${{ github.ref_name }}
+            -v image.tag=${{ steps.version.outputs.version }} \
+            -v containerID=mycontainer-${{ steps.version.outputs.version }} \
+            | kbld -f - > mycontainer-kubernetes.yaml
       
       - name: Upload Kubernetes manifests
         uses: actions/upload-artifact@v4

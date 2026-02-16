@@ -1,0 +1,73 @@
+---
+apiVersion: v1
+data:
+  CONTAINER_ID: mycontainer-v0.1.0-build.3
+  PORT: "8080"
+kind: ConfigMap
+metadata:
+  name: mycontainer-config
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  annotations:
+    kbld.k14s.io/images: |
+      - origins:
+        - resolved:
+            tag: 0.1.0-build.3
+            url: ghcr.io/rashedkvm/mycontainer:0.1.0-build.3
+        url: ghcr.io/rashedkvm/mycontainer@sha256:06cdb37fd762f0558b3dc51fcdea28dce4e8d300c756ac01e93b4e274b3ee6a9
+  name: mycontainer
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: mycontainer
+  template:
+    metadata:
+      labels:
+        app: mycontainer
+    spec:
+      containers:
+      - envFrom:
+        - configMapRef:
+            name: mycontainer-config
+        image: ghcr.io/rashedkvm/mycontainer@sha256:06cdb37fd762f0558b3dc51fcdea28dce4e8d300c756ac01e93b4e274b3ee6a9
+        livenessProbe:
+          failureThreshold: 3
+          httpGet:
+            path: /health
+            port: 8080
+          initialDelaySeconds: 5
+          periodSeconds: 10
+          timeoutSeconds: 3
+        name: mycontainer
+        ports:
+        - containerPort: 8080
+        readinessProbe:
+          failureThreshold: 2
+          httpGet:
+            path: /health
+            port: 8080
+          initialDelaySeconds: 3
+          periodSeconds: 5
+          timeoutSeconds: 2
+        resources:
+          limits:
+            cpu: 100m
+            memory: 128Mi
+          requests:
+            cpu: 50m
+            memory: 64Mi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: mycontainer
+spec:
+  ports:
+  - port: 80
+    targetPort: 8080
+  selector:
+    app: mycontainer
+  type: ClusterIP
