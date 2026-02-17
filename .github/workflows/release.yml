@@ -116,7 +116,7 @@ jobs:
             VERSION="${VERSION#v}"
           else
             SHORT_SHA=$(git rev-parse --short HEAD)
-            VERSION="900.0.1-dev+${SHORT_SHA}"
+            VERSION="900.0.1-dev.${SHORT_SHA}"
           fi
           echo "version=${VERSION}" >> $GITHUB_OUTPUT
       
